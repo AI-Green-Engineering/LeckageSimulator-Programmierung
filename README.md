@@ -19,8 +19,6 @@ Dieses Repository enthält erste Python-Prototypen zur seriellen Ansteuerung ein
   Interaktive Kommandoprüfung (Regex), lokale `stepCounter`-Verfolgung, Senden validierter Kommandos.
 - `prototype_leakage/collectBaseline.py`  
   Prototyp für sequenzielles Öffnen in festen Schritten mit Wartezeit.
-- `prototype_leakage/stepper_ramp_profiles.py`  
-  Neue zentrale Ablage für 10 Rampenprofile (Weibull + exponentieller Startansatz) und serielle Befehlserzeugung; hier kann später eine externe datenbasierte Degradationsfunktion eingebunden werden.
 
 ## Aktuelle Entwicklungen (Stand: 2026-03-24)
 - Erste End-to-End-Verbindung über einen fest verdrahteten USB-Serial-Pfad vorhanden.
@@ -28,7 +26,7 @@ Dieses Repository enthält erste Python-Prototypen zur seriellen Ansteuerung ein
 
 ## Nächste To-dos
 1. Generelle Überarbeitung und Kommentierung des Codes.
-2. Zehn Rampen entsprechend der Weibullverteilung einprogrammieren: gleicher Verschleißmechanismus mit gleichen Weibull-Parametern (Formparameter k = 3,0), Zeitskalierung bis maximal 30 Minuten.
+2. Zehn Rampen entsprechend der Weibullverteilung einprogrammieren, die einem typischen Degradationsverlauf entsprechen.
 3. Wartungsbuch bzw. Logbuch für die Experimentdurchführung ergänzen.
 
 ## Hintergrundinfos
