@@ -2,15 +2,15 @@ import serial
 import time
 
 # ------------------------------------------------------------
-# 20260401 - Weibull MP Programm 4 (1400 Schritte)
+# 20260401 - Weibull MP Programm 3
 # ------------------------------------------------------------
-# Intervall: 4
-# Obere Intervallgrenze: 33.258512 Mio. Zyklen
-# Programmdauer: 6.46 min
+# Intervall: 3
+# Obere Intervallgrenze: 24.943884 Mio. Zyklen
+# Öffnungsdauer: 5.00 min
+# Haltezeit auf maximaler Öffnung: 30 s
 # Tickdauer: 2.0 s
-# Anzahl Takte: 194
-# Geplante Gesamtöffnung: 1400 Schritte
-# Nulltakte: 0
+# Anzahl Takte: 150
+# Geplante Gesamtöffnung: 1600 Schritte
 #
 # Befehlslogik:
 #   R        = Referenzfahrt
@@ -22,10 +22,8 @@ import time
 #   1) Referenzfahrt
 #   2) Ventil vollständig schließen
 #   3) Exponentiell ansteigende Öffnung in diskreten 2-s-Takten
-#   4) Exakt dieselbe insgesamt geöffnete Schrittzahl wieder schließen
-#
-# Hinweis:
-#   Zum Prüfen ohne Hardware USE_SERIAL = False setzen.
+#   4) Maximale Öffnung 30 s halten
+#   5) Exakt dieselbe insgesamt geöffnete Schrittzahl wieder schließen
 # ------------------------------------------------------------
 
 PORT = "/dev/serial/by-id/usb-Prolific_Technology_Inc._USB-Serial_Controller_ETCRj137C01-if00-port0"
@@ -35,36 +33,32 @@ USE_SERIAL = True
 REFERENCE_SLEEP_S = 8
 CLOSE_SLEEP_S = 5
 TICK_SECONDS = 2.0
+HOLD_AT_MAX_S = 30
 FINAL_CLOSE_SLEEP_S = 5
 
 # ------------------------------------------------------------
 # Schrittfolge pro Tick
 # ------------------------------------------------------------
 steps_per_tick = [
-    2, 1, 2, 2, 1, 2, 2, 2, 1, 2,
-    2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    2, 2, 2, 2, 3, 2, 2, 2, 3, 2,
-    2, 3, 2, 3, 2, 3, 2, 3, 3, 2,
-    3, 3, 3, 3, 2, 3, 3, 3, 3, 3,
-    3, 3, 4, 3, 3, 3, 4, 3, 4, 3,
-    4, 3, 4, 3, 4, 4, 4, 4, 3, 4,
-    4, 4, 5, 4, 4, 4, 5, 4, 4, 5,
-    4, 5, 5, 4, 5, 5, 5, 5, 5, 5,
-    5, 6, 5, 5, 6, 5, 6, 5, 6, 6,
-    6, 6, 6, 6, 6, 7, 6, 6, 7, 6,
-    7, 7, 7, 7, 7, 7, 7, 8, 7, 8,
-    7, 8, 8, 8, 8, 8, 8, 8, 9, 8,
-    9, 9, 9, 9, 9, 9, 9, 10, 10, 9,
-    10, 10, 10, 11, 10, 10, 11, 11, 11, 11,
-    11, 12, 11, 12, 12, 11, 13, 12, 12, 13,
-    13, 13, 13, 13, 13, 14, 14, 14, 14, 14,
-    15, 14, 15, 15, 16, 15, 16, 16, 16, 16,
-    17, 16, 17, 18, 17, 18, 17, 19, 18, 18,
-    19, 19, 19, 20,
+    2, 3, 2, 3, 2, 3, 3, 2, 3, 3,
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 4,
+    3, 3, 4, 3, 4, 4, 3, 4, 4, 4,
+    4, 4, 4, 4, 4, 5, 4, 4, 5, 5,
+    4, 5, 5, 5, 5, 5, 5, 5, 6, 5,
+    6, 5, 6, 6, 6, 6, 6, 6, 6, 7,
+    6, 7, 7, 7, 7, 7, 7, 7, 8, 7,
+    8, 8, 8, 8, 8, 9, 8, 9, 9, 9,
+    9, 9, 10, 9, 10, 10, 10, 10, 11, 10,
+    11, 11, 11, 11, 12, 12, 12, 12, 12, 12,
+    13, 13, 13, 14, 13, 14, 14, 15, 14, 15,
+    15, 15, 16, 16, 16, 16, 17, 16, 18, 17,
+    18, 18, 18, 19, 19, 19, 20, 20, 20, 21,
+    21, 21, 22, 22, 22, 23, 23, 24, 24, 24,
+    25, 25, 26, 26, 27, 27, 27, 28, 28, 29,
 ]
 
-assert len(steps_per_tick) == 194, "Es müssen genau 194 Takte sein."
-assert sum(steps_per_tick) == 1400, "Die Schrittfolge muss insgesamt 1400 Schritte ergeben."
+assert len(steps_per_tick) == 150, "Es müssen genau 150 Takte sein."
+assert sum(steps_per_tick) == 1600, "Die Schrittfolge muss insgesamt 1600 Schritte ergeben."
 
 def send_command(ser, cmd: str):
     print(f"SENDE: {cmd}")
@@ -86,23 +80,24 @@ try:
     send_command(ser, "2300z")
     time.sleep(CLOSE_SLEEP_S)
 
-    # 3) Exponentieller Degradationsverlauf:
-    #    Die Schrittzahl pro 2-s-Takt steigt im Verlauf an.
+    # 3) Exponentieller Degradationsverlauf
     opened_steps = 0
     for i, step_count in enumerate(steps_per_tick, start=1):
         if step_count > 0:
             cmd = f"{step_count}a"
             send_command(ser, cmd)
             opened_steps += step_count
-            print(f"Takt {i:03d}/194 | Öffne um {step_count:2d} Schritte | kumulativ offen: {opened_steps}")
+            print(f"Takt {i:03d}/150 | Öffne um {step_count:2d} Schritte | kumulativ offen: {opened_steps}")
         else:
-            print(f"Takt {i:03d}/194 | keine Bewegung | kumulativ offen: {opened_steps}")
-
+            print(f"Takt {i:03d}/150 | keine Bewegung | kumulativ offen: {opened_steps}")
         time.sleep(TICK_SECONDS)
 
     print(f"Gesamt geöffnete Schritte: {opened_steps}")
 
-    # 4) Wieder zurück schließen um genau die geöffnete Schrittzahl
+    # 4) Maximale Öffnung halten
+    time.sleep(HOLD_AT_MAX_S)
+
+    # 5) Rückfahrt um genau die geöffnete Schrittzahl
     if opened_steps > 0:
         send_command(ser, f"{opened_steps}z")
         time.sleep(FINAL_CLOSE_SLEEP_S)
