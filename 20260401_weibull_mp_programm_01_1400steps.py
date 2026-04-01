@@ -2,14 +2,15 @@ import serial
 import time
 
 # ------------------------------------------------------------
-# 20260326 - Weibull MP Programm 3
+# 20260401 - Weibull MP Programm 1 (1400 Schritte)
 # ------------------------------------------------------------
-# Intervall: 3
-# Obere Intervallgrenze: 24.943884 Mio. Zyklen
-# Programmdauer: 5.00 min
+# Intervall: 1
+# Obere Intervallgrenze: 8.314628 Mio. Zyklen
+# Programmdauer: 3.00 min
 # Tickdauer: 2.0 s
-# Anzahl Takte: 150
-# Geplante Gesamtöffnung: 950 Schritte
+# Anzahl Takte: 90
+# Geplante Gesamtöffnung: 1400 Schritte
+# Nulltakte: 0
 #
 # Befehlslogik:
 #   R        = Referenzfahrt
@@ -40,25 +41,19 @@ FINAL_CLOSE_SLEEP_S = 5
 # Schrittfolge pro Tick
 # ------------------------------------------------------------
 steps_per_tick = [
-    1, 2, 1, 2, 1, 2, 2, 1, 2, 1,
-    2, 2, 2, 1, 2, 2, 2, 2, 2, 2,
-    2, 2, 2, 2, 2, 2, 2, 3, 2, 2,
-    2, 3, 2, 3, 2, 3, 2, 3, 3, 3,
-    2, 3, 3, 3, 3, 3, 3, 3, 3, 4,
-    3, 3, 4, 3, 4, 3, 4, 3, 4, 4,
-    4, 4, 4, 4, 4, 4, 5, 4, 4, 5,
-    4, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-    6, 5, 6, 6, 5, 6, 6, 6, 6, 7,
-    6, 7, 6, 7, 7, 7, 7, 7, 7, 8,
-    7, 8, 8, 8, 8, 8, 8, 9, 9, 8,
-    9, 9, 10, 9, 10, 9, 10, 10, 10, 11,
-    10, 11, 11, 11, 11, 12, 11, 12, 12, 13,
-    12, 13, 13, 13, 13, 14, 13, 14, 15, 14,
-    15, 15, 15, 16, 15, 16, 17, 16, 17, 17,
+    4, 3, 4, 4, 4, 4, 4, 4, 5, 4,
+    5, 5, 4, 6, 5, 5, 6, 5, 6, 6,
+    6, 6, 7, 7, 7, 7, 7, 7, 8, 8,
+    8, 8, 9, 9, 9, 9, 10, 10, 10, 10,
+    11, 11, 11, 12, 12, 12, 13, 13, 13, 14,
+    14, 15, 15, 15, 16, 16, 17, 17, 17, 19,
+    18, 20, 19, 21, 20, 22, 22, 23, 23, 24,
+    25, 25, 26, 27, 27, 29, 29, 30, 30, 32,
+    33, 33, 34, 36, 36, 38, 38, 40, 40, 42,
 ]
 
-assert len(steps_per_tick) == 150, "Es müssen genau 150 Takte sein."
-assert sum(steps_per_tick) == 950, "Die Schrittfolge muss insgesamt 950 Schritte ergeben."
+assert len(steps_per_tick) == 90, "Es müssen genau 90 Takte sein."
+assert sum(steps_per_tick) == 1400, "Die Schrittfolge muss insgesamt 1400 Schritte ergeben."
 
 def send_command(ser, cmd: str):
     print(f"SENDE: {cmd}")
@@ -88,12 +83,9 @@ try:
             cmd = f"{step_count}a"
             send_command(ser, cmd)
             opened_steps += step_count
-            print(
-                f"Takt {i:03d}/150 | Öffne um {step_count:2d} Schritte | "
-                f"kumulativ offen: {opened_steps}"
-            )
+            print(f"Takt {i:03d}/90 | Öffne um {step_count:2d} Schritte | kumulativ offen: {opened_steps}")
         else:
-            print(f"Takt {i:03d}/150 | keine Bewegung | kumulativ offen: {opened_steps}")
+            print(f"Takt {i:03d}/90 | keine Bewegung | kumulativ offen: {opened_steps}")
 
         time.sleep(TICK_SECONDS)
 
