@@ -2,15 +2,21 @@ import serial
 import time
 
 # ------------------------------------------------------------
-# 20260401 - Weibull MP Programm 9
+# 20260407 - Weibull MP Programm 6
 # ------------------------------------------------------------
-# Intervall: 9
-# Obere Intervallgrenze: 74.831653 Mio. Zyklen
-# Öffnungsdauer: 23.23 min
+# Intervall: 6
+# Obere Intervallgrenze: 49.887768 Mio. Zyklen
+# Öffnungsdauer: 18.00 min
 # Haltezeit auf maximaler Öffnung: 30 s
 # Tickdauer: 2.0 s
-# Anzahl Takte: 697
+# Anzahl Takte: 540
 # Geplante Gesamtöffnung: 1600 Schritte
+#
+# Hinweis:
+#   Diese Version wurde auf linear skalierte Öffnungszeiten angepasst:
+#   Programm 1 = 3 min, ..., Programm 10 = 30 min.
+#   Das Öffnungsprofil wurde aus dem getesteten Referenzprofil von
+#   Programm 10 auf 540 Takte umskaliert.
 #
 # Befehlslogik:
 #   R        = Referenzfahrt
@@ -21,7 +27,7 @@ import time
 # Ablauf:
 #   1) Referenzfahrt
 #   2) Ventil vollständig schließen
-#   3) Exponentiell ansteigende Öffnung in diskreten 2-s-Takten
+#   3) Ansteigende Öffnung in diskreten 2-s-Takten
 #   4) Maximale Öffnung 30 s halten
 #   5) Exakt dieselbe insgesamt geöffnete Schrittzahl wieder schließen
 # ------------------------------------------------------------
@@ -40,79 +46,63 @@ FINAL_CLOSE_SLEEP_S = 5
 # Schrittfolge pro Tick
 # ------------------------------------------------------------
 steps_per_tick = [
-    1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
-    1, 0, 1, 0, 1, 0, 1, 1, 0, 1,
-    0, 1, 0, 1, 0, 1, 1, 0, 1, 0,
-    1, 0, 1, 1, 0, 1, 0, 1, 0, 1,
-    1, 0, 1, 0, 1, 1, 0, 1, 0, 1,
-    1, 0, 1, 1, 0, 1, 0, 1, 1, 0,
-    1, 1, 0, 1, 1, 0, 1, 1, 0, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     0, 1, 1, 0, 1, 1, 1, 0, 1, 1,
-    0, 1, 1, 0, 1, 1, 0, 1, 1, 1,
-    0, 1, 1, 0, 1, 1, 1, 0, 1, 1,
-    0, 1, 1, 1, 0, 1, 1, 1, 0, 1,
-    1, 1, 1, 0, 1, 1, 1, 0, 1, 1,
-    1, 1, 0, 1, 1, 1, 1, 0, 1, 1,
-    1, 1, 0, 1, 1, 1, 1, 1, 0, 1,
-    1, 1, 1, 1, 1, 0, 1, 1, 1, 1,
+    1, 0, 1, 1, 1, 1, 1, 1, 0, 1,
     1, 1, 1, 1, 0, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 0, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 2, 1, 1, 1, 1, 1, 1,
+    1, 2, 1, 1, 1, 2, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 2, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 2, 1, 1, 1,
-    1, 1, 1, 1, 2, 1, 1, 1, 1, 1,
-    2, 1, 1, 1, 1, 2, 1, 1, 1, 1,
-    2, 1, 1, 1, 1, 2, 1, 1, 1, 2,
-    1, 1, 1, 2, 1, 1, 2, 1, 1, 1,
-    2, 1, 1, 2, 1, 1, 2, 1, 1, 2,
-    1, 1, 2, 1, 2, 1, 1, 2, 1, 2,
-    1, 1, 2, 1, 2, 1, 1, 2, 1, 2,
-    1, 2, 1, 2, 1, 2, 1, 2, 1, 2,
-    1, 2, 1, 2, 1, 2, 1, 2, 1, 2,
-    1, 2, 2, 1, 2, 1, 2, 2, 1, 2,
-    1, 2, 2, 1, 2, 2, 1, 2, 2, 1,
-    2, 2, 1, 2, 2, 1, 2, 2, 2, 1,
-    2, 2, 2, 1, 2, 2, 2, 1, 2, 2,
-    2, 2, 1, 2, 2, 2, 2, 2, 1, 2,
-    2, 2, 2, 2, 2, 2, 2, 2, 1, 2,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 2, 1, 2, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 2, 1, 2, 1, 1, 1,
+    2, 1, 2, 1, 2, 1, 2, 1, 2, 1,
+    1, 2, 1, 1, 1, 2, 1, 2, 1, 1,
+    2, 1, 1, 2, 1, 2, 2, 1, 2, 1,
+    2, 2, 1, 2, 2, 2, 1, 2, 2, 1,
+    2, 2, 2, 1, 2, 2, 1, 1, 2, 2,
+    2, 1, 1, 2, 2, 2, 2, 1, 1, 2,
+    2, 2, 2, 2, 1, 1, 2, 2, 2, 2,
     2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
     2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    3, 2, 2, 2, 2, 2, 2, 2, 2, 3,
-    2, 2, 2, 2, 3, 2, 2, 2, 2, 3,
-    2, 2, 2, 3, 2, 2, 2, 3, 2, 2,
-    3, 2, 2, 3, 2, 2, 3, 2, 2, 3,
-    2, 3, 2, 3, 2, 2, 3, 2, 3, 2,
-    3, 2, 3, 2, 3, 2, 3, 3, 2, 3,
-    2, 3, 2, 3, 3, 2, 3, 3, 2, 3,
-    3, 2, 3, 3, 2, 3, 3, 3, 2, 3,
-    3, 3, 2, 3, 3, 3, 3, 3, 2, 3,
+    2, 2, 2, 3, 2, 2, 2, 2, 2, 2,
+    3, 2, 2, 2, 2, 3, 2, 2, 2, 3,
+    2, 2, 2, 3, 2, 2, 3, 2, 2, 3,
+    2, 2, 3, 2, 2, 2, 2, 3, 2, 2,
+    2, 2, 3, 2, 2, 2, 3, 2, 3, 2,
+    2, 2, 2, 3, 2, 3, 2, 3, 3, 2,
+    3, 2, 2, 3, 3, 2, 3, 3, 3, 2,
+    3, 3, 2, 2, 2, 3, 3, 3, 2, 2,
+    2, 3, 3, 3, 3, 2, 3, 2, 3, 3,
+    2, 3, 3, 2, 3, 3, 3, 3, 2, 2,
+    3, 3, 2, 3, 2, 2, 3, 3, 2, 3,
+    2, 3, 3, 2, 3, 3, 2, 3, 3, 2,
+    3, 3, 2, 3, 3, 3, 3, 2, 3, 3,
     3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-    2, 3, 3, 4, 3, 3, 3, 3, 3, 3,
-    3, 3, 3, 3, 3, 4, 3, 3, 3, 3,
-    3, 4, 3, 3, 3, 4, 3, 3, 3, 4,
-    3, 3, 4, 3, 3, 4, 3, 4, 3, 4,
-    3, 3, 4, 3, 4, 3, 4, 3, 4, 3,
-    4, 4, 3, 4, 3, 4, 4, 3, 4, 4,
-    3, 4, 4, 4, 3, 4, 4, 4, 3, 4,
-    4, 4, 4, 4, 4, 3, 4, 4, 4, 4,
-    4, 4, 4, 4, 4, 4, 4, 4, 4, 5,
-    4, 4, 4, 4, 4, 5, 4, 4, 4, 4,
-    5, 4, 4, 5, 4, 4, 5, 4, 4, 5,
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+    4, 3, 3, 3, 4, 4, 3, 3, 4, 3,
+    4, 4, 3, 4, 4, 3, 4, 3, 4, 3,
+    4, 3, 4, 3, 4, 4, 3, 4, 4, 3,
+    4, 4, 4, 3, 4, 4, 4, 4, 4, 4,
+    5, 4, 4, 4, 4, 4, 4, 4, 4, 5,
     4, 5, 4, 5, 4, 5, 4, 5, 4, 5,
-    4, 5, 5, 4, 5, 5, 4, 5, 5, 4,
-    5, 5, 5, 4, 5, 5, 5, 5, 5, 5,
-    5, 5, 4, 5, 5, 5, 5, 6, 5, 5,
-    5, 5, 5, 5, 5, 6, 5, 5, 5, 6,
-    5, 5, 6, 5, 5, 6, 5, 5, 6, 5,
-    6, 5, 6, 5, 6, 6, 5, 6, 5, 6,
-    6, 6, 5, 6, 6, 6, 5, 6, 6, 6,
-    6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-    6, 6, 6, 6, 7, 6, 6,
+    5, 4, 5, 5, 4, 5, 5, 5, 5, 4,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 6, 5, 5, 5, 5, 6, 5,
+    5, 6, 5, 5, 5, 5, 6, 5, 5, 5,
+    5, 6, 5, 6, 6, 5, 5, 6, 5, 6,
+    5, 6, 6, 5, 6, 6, 6, 6, 6, 5,
+    6, 6, 6, 5, 7, 5, 6, 7, 5, 6,
+    7, 6, 6, 6, 6, 6, 7, 6, 6, 7,
+    6, 6, 7, 6, 7, 7, 6, 6, 8, 6,
+    6, 8, 6, 7, 7, 7, 6, 8, 7, 6,
+    8, 7, 7, 7, 7, 7, 8, 7, 7, 8,
+    7, 7, 8, 7, 8, 7, 8, 8, 7, 8,
 ]
 
-assert len(steps_per_tick) == 697, "Es müssen genau 697 Takte sein."
+assert len(steps_per_tick) == 540, "Es müssen genau 540 Takte sein."
 assert sum(steps_per_tick) == 1600, "Die Schrittfolge muss insgesamt 1600 Schritte ergeben."
 
 def send_command(ser, cmd: str):
@@ -135,16 +125,16 @@ try:
     send_command(ser, "2300z")
     time.sleep(CLOSE_SLEEP_S)
 
-    # 3) Exponentieller Degradationsverlauf
+    # 3) Öffnungsverlauf
     opened_steps = 0
     for i, step_count in enumerate(steps_per_tick, start=1):
         if step_count > 0:
             cmd = f"{step_count}a"
             send_command(ser, cmd)
             opened_steps += step_count
-            print(f"Takt {i:03d}/697 | Öffne um {step_count:2d} Schritte | kumulativ offen: {opened_steps}")
+            print(f"Takt {i:03d}/540 | Öffne um {step_count:2d} Schritte | kumulativ offen: {opened_steps}")
         else:
-            print(f"Takt {i:03d}/697 | keine Bewegung | kumulativ offen: {opened_steps}")
+            print(f"Takt {i:03d}/540 | keine Bewegung | kumulativ offen: {opened_steps}")
         time.sleep(TICK_SECONDS)
 
     print(f"Gesamt geöffnete Schritte: {opened_steps}")

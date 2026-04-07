@@ -2,15 +2,21 @@ import serial
 import time
 
 # ------------------------------------------------------------
-# 20260401 - Weibull MP Programm 7
+# 20260407 - Weibull MP Programm 4
 # ------------------------------------------------------------
-# Intervall: 7
-# Obere Intervallgrenze: 58.202397 Mio. Zyklen
-# Öffnungsdauer: 13.92 min
+# Intervall: 4
+# Obere Intervallgrenze: 33.258512 Mio. Zyklen
+# Öffnungsdauer: 12.00 min
 # Haltezeit auf maximaler Öffnung: 30 s
 # Tickdauer: 2.0 s
-# Anzahl Takte: 418
+# Anzahl Takte: 360
 # Geplante Gesamtöffnung: 1600 Schritte
+#
+# Hinweis:
+#   Diese Version wurde auf linear skalierte Öffnungszeiten angepasst:
+#   Programm 1 = 3 min, ..., Programm 10 = 30 min.
+#   Das Öffnungsprofil wurde aus dem getesteten Referenzprofil von
+#   Programm 10 auf 360 Takte umskaliert.
 #
 # Befehlslogik:
 #   R        = Referenzfahrt
@@ -21,7 +27,7 @@ import time
 # Ablauf:
 #   1) Referenzfahrt
 #   2) Ventil vollständig schließen
-#   3) Exponentiell ansteigende Öffnung in diskreten 2-s-Takten
+#   3) Ansteigende Öffnung in diskreten 2-s-Takten
 #   4) Maximale Öffnung 30 s halten
 #   5) Exakt dieselbe insgesamt geöffnete Schrittzahl wieder schließen
 # ------------------------------------------------------------
@@ -40,51 +46,45 @@ FINAL_CLOSE_SLEEP_S = 5
 # Schrittfolge pro Tick
 # ------------------------------------------------------------
 steps_per_tick = [
-    1, 1, 1, 0, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 0, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 2, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 2, 1, 1,
-    1, 1, 1, 2, 1, 1, 1, 1, 2, 1,
-    1, 1, 1, 2, 1, 1, 2, 1, 1, 1,
-    2, 1, 1, 2, 1, 1, 2, 1, 1, 2,
-    1, 2, 1, 1, 2, 1, 2, 1, 2, 1,
-    1, 2, 1, 2, 1, 2, 2, 1, 2, 1,
-    2, 1, 2, 1, 2, 2, 1, 2, 2, 1,
-    2, 1, 2, 2, 2, 1, 2, 2, 1, 2,
-    2, 2, 2, 1, 2, 2, 2, 2, 1, 2,
-    2, 2, 2, 2, 2, 2, 2, 2, 1, 2,
-    2, 2, 2, 2, 2, 3, 2, 2, 2, 2,
-    2, 2, 2, 2, 2, 3, 2, 2, 2, 2,
-    3, 2, 2, 2, 3, 2, 2, 3, 2, 2,
-    3, 2, 3, 2, 2, 3, 2, 3, 2, 3,
-    2, 3, 2, 3, 3, 2, 3, 2, 3, 3,
-    2, 3, 3, 2, 3, 3, 3, 3, 2, 3,
-    3, 3, 3, 3, 3, 2, 3, 3, 3, 3,
-    3, 3, 3, 3, 4, 3, 3, 3, 3, 3,
-    3, 4, 3, 3, 3, 4, 3, 3, 4, 3,
-    4, 3, 3, 4, 3, 4, 3, 4, 3, 4,
-    4, 3, 4, 4, 3, 4, 4, 4, 3, 4,
-    4, 4, 4, 4, 3, 4, 4, 4, 4, 4,
-    4, 5, 4, 4, 4, 4, 4, 5, 4, 4,
-    5, 4, 4, 5, 4, 4, 5, 4, 5, 5,
-    4, 5, 4, 5, 5, 4, 5, 5, 5, 5,
-    4, 5, 5, 5, 5, 5, 5, 5, 5, 6,
-    5, 5, 5, 5, 6, 5, 5, 6, 5, 6,
-    5, 6, 5, 6, 5, 6, 6, 5, 6, 6,
-    6, 6, 5, 6, 6, 6, 6, 6, 7, 6,
-    6, 6, 6, 7, 6, 6, 7, 6, 7, 6,
-    7, 6, 7, 7, 6, 7, 7, 7, 7, 7,
-    7, 7, 7, 7, 7, 7, 7, 7, 8, 7,
-    7, 8, 7, 8, 7, 8, 8, 7, 8, 8,
-    8, 8, 8, 8, 8, 8, 8, 8, 8, 9,
-    8, 8, 9, 8, 9, 8, 9, 9, 8, 9,
-    9, 9, 9, 9, 9, 9, 9, 9, 10, 9,
-    9, 10, 9, 10, 10, 9, 10, 10, 10, 10,
-    10, 10, 10, 10, 10, 10, 11, 10,
+    2, 1, 2, 2, 1, 2, 1, 1, 1, 1,
+    2, 2, 1, 1, 1, 1, 2, 2, 1, 1,
+    2, 2, 1, 1, 2, 2, 1, 1, 2, 2,
+    1, 1, 2, 1, 2, 2, 1, 2, 1, 1,
+    2, 1, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2, 2, 2, 3, 2, 2,
+    2, 2, 2, 3, 2, 3, 2, 3, 2, 2,
+    3, 2, 3, 3, 2, 3, 2, 3, 2, 2,
+    3, 2, 3, 3, 2, 3, 3, 3, 2, 3,
+    3, 3, 3, 2, 3, 3, 3, 3, 3, 3,
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+    3, 3, 3, 2, 2, 2, 3, 3, 2, 2,
+    3, 2, 3, 3, 2, 3, 2, 3, 2, 3,
+    2, 3, 2, 3, 3, 3, 3, 2, 3, 3,
+    3, 3, 3, 3, 3, 3, 3, 3, 4, 3,
+    3, 3, 4, 3, 4, 4, 3, 4, 3, 3,
+    4, 4, 3, 3, 4, 4, 4, 4, 4, 4,
+    4, 4, 4, 4, 4, 4, 4, 5, 4, 4,
+    4, 5, 4, 4, 5, 4, 5, 4, 5, 4,
+    5, 4, 5, 5, 4, 4, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    6, 5, 5, 6, 5, 6, 5, 6, 5, 6,
+    5, 5, 6, 6, 5, 5, 6, 5, 6, 5,
+    6, 6, 5, 6, 6, 6, 6, 6, 6, 6,
+    6, 6, 6, 6, 7, 7, 6, 6, 7, 7,
+    7, 7, 7, 7, 7, 7, 6, 7, 7, 7,
+    7, 7, 7, 7, 7, 8, 7, 7, 8, 8,
+    8, 8, 8, 7, 8, 8, 8, 8, 8, 9,
+    8, 8, 8, 8, 9, 9, 9, 9, 9, 9,
+    9, 9, 9, 9, 10, 9, 10, 10, 9, 10,
+    10, 10, 10, 10, 10, 10, 11, 10, 10, 10,
+    10, 10, 11, 11, 10, 11, 10, 11, 11, 11,
+    11, 11, 11, 11, 11, 11, 12, 12, 12, 12,
 ]
 
-assert len(steps_per_tick) == 418, "Es müssen genau 418 Takte sein."
+assert len(steps_per_tick) == 360, "Es müssen genau 360 Takte sein."
 assert sum(steps_per_tick) == 1600, "Die Schrittfolge muss insgesamt 1600 Schritte ergeben."
 
 def send_command(ser, cmd: str):
@@ -107,16 +107,16 @@ try:
     send_command(ser, "2300z")
     time.sleep(CLOSE_SLEEP_S)
 
-    # 3) Exponentieller Degradationsverlauf
+    # 3) Öffnungsverlauf
     opened_steps = 0
     for i, step_count in enumerate(steps_per_tick, start=1):
         if step_count > 0:
             cmd = f"{step_count}a"
             send_command(ser, cmd)
             opened_steps += step_count
-            print(f"Takt {i:03d}/418 | Öffne um {step_count:2d} Schritte | kumulativ offen: {opened_steps}")
+            print(f"Takt {i:03d}/360 | Öffne um {step_count:2d} Schritte | kumulativ offen: {opened_steps}")
         else:
-            print(f"Takt {i:03d}/418 | keine Bewegung | kumulativ offen: {opened_steps}")
+            print(f"Takt {i:03d}/360 | keine Bewegung | kumulativ offen: {opened_steps}")
         time.sleep(TICK_SECONDS)
 
     print(f"Gesamt geöffnete Schritte: {opened_steps}")

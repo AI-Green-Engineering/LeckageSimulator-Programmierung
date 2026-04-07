@@ -2,15 +2,21 @@ import serial
 import time
 
 # ------------------------------------------------------------
-# 20260401 - Weibull MP Programm 3
+# 20260407 - Weibull MP Programm 3
 # ------------------------------------------------------------
 # Intervall: 3
 # Obere Intervallgrenze: 24.943884 Mio. Zyklen
-# Öffnungsdauer: 5.00 min
+# Öffnungsdauer: 9.00 min
 # Haltezeit auf maximaler Öffnung: 30 s
 # Tickdauer: 2.0 s
-# Anzahl Takte: 150
+# Anzahl Takte: 270
 # Geplante Gesamtöffnung: 1600 Schritte
+#
+# Hinweis:
+#   Diese Version wurde auf linear skalierte Öffnungszeiten angepasst:
+#   Programm 1 = 3 min, ..., Programm 10 = 30 min.
+#   Das Öffnungsprofil wurde aus dem getesteten Referenzprofil von
+#   Programm 10 auf 270 Takte umskaliert.
 #
 # Befehlslogik:
 #   R        = Referenzfahrt
@@ -21,7 +27,7 @@ import time
 # Ablauf:
 #   1) Referenzfahrt
 #   2) Ventil vollständig schließen
-#   3) Exponentiell ansteigende Öffnung in diskreten 2-s-Takten
+#   3) Ansteigende Öffnung in diskreten 2-s-Takten
 #   4) Maximale Öffnung 30 s halten
 #   5) Exakt dieselbe insgesamt geöffnete Schrittzahl wieder schließen
 # ------------------------------------------------------------
@@ -40,24 +46,36 @@ FINAL_CLOSE_SLEEP_S = 5
 # Schrittfolge pro Tick
 # ------------------------------------------------------------
 steps_per_tick = [
-    2, 3, 2, 3, 2, 3, 3, 2, 3, 3,
-    3, 3, 3, 3, 3, 3, 3, 3, 3, 4,
-    3, 3, 4, 3, 4, 4, 3, 4, 4, 4,
-    4, 4, 4, 4, 4, 5, 4, 4, 5, 5,
-    4, 5, 5, 5, 5, 5, 5, 5, 6, 5,
-    6, 5, 6, 6, 6, 6, 6, 6, 6, 7,
-    6, 7, 7, 7, 7, 7, 7, 7, 8, 7,
-    8, 8, 8, 8, 8, 9, 8, 9, 9, 9,
-    9, 9, 10, 9, 10, 10, 10, 10, 11, 10,
-    11, 11, 11, 11, 12, 12, 12, 12, 12, 12,
-    13, 13, 13, 14, 13, 14, 14, 15, 14, 15,
-    15, 15, 16, 16, 16, 16, 17, 16, 18, 17,
-    18, 18, 18, 19, 19, 19, 20, 20, 20, 21,
-    21, 21, 22, 22, 22, 23, 23, 24, 24, 24,
-    25, 25, 26, 26, 27, 27, 27, 28, 28, 29,
+    1, 1, 1, 1, 2, 1, 1, 2, 1, 2,
+    1, 2, 1, 2, 1, 2, 2, 1, 1, 2,
+    2, 1, 2, 2, 1, 2, 2, 1, 2, 2,
+    1, 2, 1, 2, 2, 2, 1, 2, 1, 2,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2, 2, 2, 2, 3, 2,
+    2, 2, 2, 2, 3, 3, 2, 3, 2, 2,
+    3, 3, 2, 2, 2, 3, 2, 3, 2, 2,
+    3, 2, 3, 2, 3, 3, 3, 3, 3, 3,
+    3, 3, 2, 3, 3, 3, 3, 3, 3, 3,
+    3, 3, 3, 3, 3, 3, 4, 3, 3, 3,
+    4, 3, 4, 3, 4, 3, 4, 3, 4, 4,
+    3, 4, 4, 4, 4, 4, 5, 4, 4, 5,
+    5, 5, 4, 4, 4, 5, 5, 4, 5, 4,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 6,
+    5, 5, 6, 5, 5, 6, 5, 5, 6, 6,
+    6, 6, 6, 6, 6, 7, 6, 7, 6, 7,
+    7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+    8, 7, 8, 7, 8, 8, 7, 7, 8, 8,
+    8, 8, 9, 8, 8, 9, 8, 9, 8, 8,
+    9, 9, 9, 9, 9, 9, 9, 9, 9, 9,
+    9, 10, 9, 10, 9, 10, 10, 10, 10, 10,
+    10, 11, 10, 10, 11, 11, 11, 11, 12, 11,
+    12, 11, 12, 12, 12, 12, 12, 12, 12, 12,
+    13, 12, 13, 14, 12, 14, 13, 13, 14, 14,
+    13, 14, 15, 13, 15, 15, 14, 15, 15, 14,
+    16, 15, 15, 15, 15, 15, 15, 16, 17, 16,
 ]
 
-assert len(steps_per_tick) == 150, "Es müssen genau 150 Takte sein."
+assert len(steps_per_tick) == 270, "Es müssen genau 270 Takte sein."
 assert sum(steps_per_tick) == 1600, "Die Schrittfolge muss insgesamt 1600 Schritte ergeben."
 
 def send_command(ser, cmd: str):
@@ -80,16 +98,16 @@ try:
     send_command(ser, "2300z")
     time.sleep(CLOSE_SLEEP_S)
 
-    # 3) Exponentieller Degradationsverlauf
+    # 3) Öffnungsverlauf
     opened_steps = 0
     for i, step_count in enumerate(steps_per_tick, start=1):
         if step_count > 0:
             cmd = f"{step_count}a"
             send_command(ser, cmd)
             opened_steps += step_count
-            print(f"Takt {i:03d}/150 | Öffne um {step_count:2d} Schritte | kumulativ offen: {opened_steps}")
+            print(f"Takt {i:03d}/270 | Öffne um {step_count:2d} Schritte | kumulativ offen: {opened_steps}")
         else:
-            print(f"Takt {i:03d}/150 | keine Bewegung | kumulativ offen: {opened_steps}")
+            print(f"Takt {i:03d}/270 | keine Bewegung | kumulativ offen: {opened_steps}")
         time.sleep(TICK_SECONDS)
 
     print(f"Gesamt geöffnete Schritte: {opened_steps}")

@@ -2,15 +2,21 @@ import serial
 import time
 
 # ------------------------------------------------------------
-# 20260401 - Weibull MP Programm 10
+# 20260407 - Weibull MP Programm 10
 # ------------------------------------------------------------
 # Intervall: 10
-# Obere Intervallgrenze: 83.146281 Mio. Zyklen
+# Obere Intervallgrenze: 83.146280 Mio. Zyklen
 # Öffnungsdauer: 30.00 min
 # Haltezeit auf maximaler Öffnung: 30 s
 # Tickdauer: 2.0 s
 # Anzahl Takte: 900
 # Geplante Gesamtöffnung: 1600 Schritte
+#
+# Hinweis:
+#   Diese Version wurde auf linear skalierte Öffnungszeiten angepasst:
+#   Programm 1 = 3 min, ..., Programm 10 = 30 min.
+#   Das Öffnungsprofil wurde aus dem getesteten Referenzprofil von
+#   Programm 10 auf 900 Takte umskaliert.
 #
 # Befehlslogik:
 #   R        = Referenzfahrt
@@ -21,7 +27,7 @@ import time
 # Ablauf:
 #   1) Referenzfahrt
 #   2) Ventil vollständig schließen
-#   3) Exponentiell ansteigende Öffnung in diskreten 2-s-Takten
+#   3) Ansteigende Öffnung in diskreten 2-s-Takten
 #   4) Maximale Öffnung 30 s halten
 #   5) Exakt dieselbe insgesamt geöffnete Schrittzahl wieder schließen
 # ------------------------------------------------------------
@@ -155,7 +161,7 @@ try:
     send_command(ser, "2300z")
     time.sleep(CLOSE_SLEEP_S)
 
-    # 3) Exponentieller Degradationsverlauf
+    # 3) Öffnungsverlauf
     opened_steps = 0
     for i, step_count in enumerate(steps_per_tick, start=1):
         if step_count > 0:
